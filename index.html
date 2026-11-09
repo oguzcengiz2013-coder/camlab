@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera Lab — Optimized Effects & Editor</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151d32;--line:#2d3a56;--accent:#7edcff;--text:#eaf2ff;--muted:#9daec9}*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);background:radial-gradient(circle at top left,#20375c,#0b1020 55%);min-height:100vh}
+header{display:flex;align-items:center;gap:14px;padding:20px max(18px,calc((100vw - 1450px)/2));border-bottom:1px solid var(--line)}header h1{font-size:25px;margin:0}header p{margin:0;color:var(--muted)}.logo{font-size:32px}
+main{max-width:1450px;margin:auto;padding:20px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);gap:18px}.panel{background:#141c30ed;border:1px solid var(--line);border-radius:18px;padding:17px;min-width:0;box-shadow:0 10px 25px #0002}h2{font-size:17px;margin:0 0 12px}.preview{background:#05080e;position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:12px;border:1px solid #35405a;display:grid;place-items:center}.preview canvas{width:100%;height:100%;object-fit:contain}.placeholder{position:absolute;color:var(--muted);text-align:center;padding:24px;pointer-events:none}.record-dot{color:#ff637a;font-weight:800}.status{min-height:22px;color:var(--muted);font-size:13px;margin:9px 0}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 2px}button,.file-btn{background:#263653;color:var(--text);border:1px solid #445776;border-radius:10px;padding:10px 12px;font:inherit;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px}button:hover,.file-btn:hover{background:#35476a}button:disabled{opacity:.42;cursor:not-allowed}.primary{background:#186a91;border-color:#28a5d5}.danger{background:#763449;border-color:#b84a62}.active{outline:2px solid var(--accent)}input[type=file]{display:none}.hint{font-size:12px;color:var(--muted);margin:10px 0 0}.effects{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.effects button{font-size:13px;padding:9px 5px}.controls{display:grid;gap:12px}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.row>label:first-child{min-width:110px}.grow{flex:1;min-width:90px}input[type=range]{width:100%;accent-color:#72cfff}input[type=color]{width:45px;height:36px;background:transparent;border:0;cursor:pointer}select,input[type=number]{background:#202c45;color:white;border:1px solid #465676;border-radius:8px;padding:8px}input[type=number]{width:105px}input[type=checkbox]{accent-color:#65d2fc}details{border-top:1px solid var(--line);padding-top:11px}summary{font-weight:650;cursor:pointer}.editor-preview{width:100%;background:#070b12;max-height:230px;border-radius:10px;margin:8px 0}.time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}.split{display:flex;gap:10px;flex-wrap:wrap}.split>*{flex:1 1 100px}.tag{font-size:12px;background:#283b59;padding:3px 8px;border-radius:7px;color:#b3dff5}footer{text-align:center;color:var(--muted);padding:12px 20px 30px}video#camera,video#trimVideo{display:none}@media(max-width:980px){main{grid-template-columns:1fr}.effects{grid-template-columns:repeat(4,minmax(0,1fr))}}@media(max-width:470px){.effects{grid-template-columns:repeat(3,minmax(0,1fr))}header h1{font-size:20px}.panel{padding:12px}}
+</style>
+</head>
+<body>
+<header><div class="logo">📷</div><div><h1>Camera Lab <span class="tag">17 effects</span></h1><p>Live camera effects · Video cutter</p></div></header>
+<main>
+<section class="panel"><h2>Live preview</h2><div class="preview"><canvas id="screen" width="1280" height="720"></canvas><div class="placeholder" id="placeholder">Select <b>Start Camera</b> to begin.<br>Camera access works on HTTPS or localhost.</div></div><p id="status" class="status" role="status">Camera is off.</p>
+<div class="toolbar"><button id="start" class="primary">📹 Start Camera</button><button id="flip">🔁 Switch Camera</button><button id="shot" disabled>📸 Take Photo</button><button id="record" disabled>🔴 Record Video</button><button id="pause" disabled>⏸ Pause</button><button id="stop" disabled>⏹ Stop</button></div>
+<p class="hint">Photos save as PNG. Recordings save as WebM where supported. Video records the visible effects. Enable microphone to include sound in new recordings.</p>
+<div class="toolbar"><label><input id="mirror" type="checkbox" checked> Mirror preview</label><label><input id="micEnabled" type="checkbox"> 🎤 Record microphone audio</label></div><p class="hint">The browser asks for microphone permission only when you start recording with this option enabled.</p>
+</section>
+<section class="panel"><h2>Effects</h2><div class="effects" id="effects"></div><div class="controls" style="margin-top:16px"><div class="row"><label for="intensity">Effect strength</label><div class="grow"><input id="intensity" type="range" min="0" max="100" value="75"></div><output id="intensityValue">75%</output></div>
+
+</div></section>
+<section class="panel"><h2>Video cutter <span class="tag">Trim & export</span></h2><p class="hint">Choose a video from your device, set the start/end positions, preview the selection, then export the cut clip in WebM format. Your files are processed locally.</p>
+<label class="file-btn" for="videoFile">📁 Choose a Video</label><input type="file" id="videoFile" accept="video/*"><div id="editorInfo" class="status">No video selected.</div><video id="editor" class="editor-preview" controls playsinline></video><div class="controls"><div class="row"><label for="startTime">Start (sec)</label><input id="startTime" type="number" min="0" step="0.1" value="0"><label for="endTime">End (sec)</label><input id="endTime" type="number" min="0" step="0.1" value="0"></div><div class="row"><label for="trimStart">Start marker</label><input id="trimStart" class="grow" type="range" min="0" max="100" step="0.1" value="0"></div><div class="row"><label for="trimEnd">End marker</label><input id="trimEnd" class="grow" type="range" min="0" max="100" step="0.1" value="100"></div><div class="toolbar"><button id="previewCut" disabled>▶ Preview Cut</button><button id="exportCut" class="primary" disabled>✂ Export Cut</button><button id="cancelCut" disabled>Cancel Export</button></div><p class="time" id="cutStatus">Trimmed video export requires MediaRecorder and video playback support in your browser.</p></div>
+<video id="trimVideo" playsinline preload="auto" muted></video><canvas id="trimCanvas" width="1280" height="720" style="display:none"></canvas></section>
+<section class="panel"><h2>How it works</h2><p><b>17 live effects:</b> Normal, Grayscale, Sepia, Invert, Vintage, Noir, Neon, Comic, Pixelate, Blur, Glitch, Mirror Split, Rainbow, Posterize, Thermal, Edge Sketch and Kaleidoscope.</p><p><b>Recording:</b> Pause/resume to create cuts while recording. The video cutter can trim uploaded videos or newly saved recordings (export from the cutter is silent).</p><p class="hint">Browser notes: Chrome or Edge on desktop is recommended. Camera permissions require a secure page (HTTPS) or http://localhost. Some browsers may not support recording, export, or some source video formats.</p></section>
+</main><footer>Camera Lab — runs in your browser. No uploads or external libraries.</footer>
+<video id="camera" autoplay muted playsinline></video>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id), canvas=$('screen'),cx=canvas.getContext('2d',{willReadFrequently:true}), camera=$('camera'), status=$('status');
+const effects=['Normal','Grayscale','Sepia','Invert','Vintage','Noir','Neon','Comic','Pixelate','Blur','Glitch','Mirror Split','Rainbow','Posterize','Thermal','Edge Sketch','Kaleidoscope'];
+let effect='Normal',stream=null,micStream=null,recorder=null,chunks=[],recording=false,paused=false,facing='user',raf=0,lastFrameTime=0,videoUrl=null,trimUrl=null,trimAbort=false,exporting=false;
+const internal=document.createElement('canvas');internal.width=canvas.width;internal.height=canvas.height;const ix=internal.getContext('2d',{willReadFrequently:true});
+// Half-resolution kaleidoscope processing with cached pixel lookup.
+const kaleidoCanvas=document.createElement('canvas');kaleidoCanvas.width=640;kaleidoCanvas.height=360;
+const kx=kaleidoCanvas.getContext('2d',{willReadFrequently:true});
+const kaleidoOut=document.createElement('canvas');kaleidoOut.width=640;kaleidoOut.height=360;
+const ko=kaleidoOut.getContext('2d');
+let kaleidoMap=null,kaleidoSlices=0;
+function getKaleidoMap(slices){
+ if(kaleidoMap&&kaleidoSlices===slices)return kaleidoMap;
+ const w=640,h=360,cx=w/2,cy=h/2,wedge=2*Math.PI/slices;
+ const map=new Uint32Array(w*h);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const dx=x-cx,dy=y-cy,r=Math.hypot(dx,dy);
+  let angle=((Math.atan2(dy,dx)%wedge)+wedge)%wedge;
+  if(angle>wedge/2)angle=wedge-angle;
+  const sx=Math.max(0,Math.min(w-1,Math.round(cx+r*Math.cos(angle))));
+  const sy=Math.max(0,Math.min(h-1,Math.round(cy+r*Math.sin(angle))));
+  map[y*w+x]=sy*w+sx;
+ }
+ kaleidoSlices=slices;kaleidoMap=map;return map;
+}
+const buttonBox=$('effects');for(const name of effects){const b=document.createElement('button');b.textContent=name;b.dataset.name=name;b.onclick=()=>{effect=name;buttonBox.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.name===name))};buttonBox.appendChild(b)}buttonBox.firstChild.classList.add('active');
+const setStatus=t=>{status.textContent=t};const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));const intensity=()=>Number($('intensity').value)/100;
+$('intensity').oninput=()=>$('intensityValue').textContent=$('intensity').value+'%';
+const canRecord=()=>!!(canvas.captureStream&&window.MediaRecorder);
+async function stopCamera(){cancelAnimationFrame(raf);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}camera.srcObject=null}
+async function startCamera(){if(recording){setStatus('Stop recording before switching cameras.');return}await stopCamera();try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false});camera.srcObject=stream;await camera.play();$('placeholder').hidden=true;$('shot').disabled=false;$('record').disabled=!canRecord();setStatus('Camera is ready.');drawLoop()}catch(e){setStatus('Camera error: '+(e.message||e.name)+'. Use HTTPS or localhost, and allow camera access.');$('placeholder').hidden=false}}
+$('start').onclick=startCamera;$('flip').onclick=()=>{facing=facing==='user'?'environment':'user';startCamera()};
+function drawCover(ctx,img,w,h){const sw=img.videoWidth||img.naturalWidth,sh=img.videoHeight||img.naturalHeight;if(!sw||!sh)return;const scale=Math.max(w/sw,h/sh),dw=sw*scale,dh=sh*scale;ctx.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh)}
+function render(){const w=canvas.width,h=canvas.height;if(!camera.videoWidth){cx.fillStyle='#05080e';cx.fillRect(0,0,w,h);return}ix.save();ix.clearRect(0,0,w,h);if($('mirror').checked){ix.translate(w,0);ix.scale(-1,1)}drawCover(ix,camera,w,h);ix.restore();
+const strength=intensity(),t=performance.now()/1000;
+if(effect==='Kaleidoscope'){
+ const slices=3+Math.round(strength*9),map=getKaleidoMap(slices);
+ kx.drawImage(internal,0,0,640,360);
+ const src=kx.getImageData(0,0,640,360),out=kx.createImageData(640,360);
+ const from=new Uint32Array(src.data.buffer),to=new Uint32Array(out.data.buffer);
+ for(let i=0;i<map.length;i++)to[i]=from[map[i]];
+ ko.putImageData(out,0,0);
+ cx.imageSmoothingEnabled=true;cx.drawImage(kaleidoOut,0,0,w,h);
+}else if(effect==='Blur'){cx.clearRect(0,0,w,h);cx.save();cx.filter=`blur(${(strength*12).toFixed(1)}px)`;cx.drawImage(internal,0,0);cx.restore()}else if(effect==='Pixelate'){const tile=Math.max(2,Math.round(2+strength*26)),pw=Math.ceil(w/tile),ph=Math.ceil(h/tile);const mini=document.createElement('canvas');mini.width=pw;mini.height=ph;const m=mini.getContext('2d');m.drawImage(internal,0,0,pw,ph);cx.imageSmoothingEnabled=false;cx.drawImage(mini,0,0,pw,ph,0,0,w,h);cx.imageSmoothingEnabled=true}else{
+if(effect==='Normal'||effect==='Mirror Split'){cx.drawImage(internal,0,0,w,h);if(effect==='Mirror Split'){cx.save();cx.translate(w,0);cx.scale(-1,1);cx.drawImage(internal,0,0,w/2,h,0,0,w/2,h);cx.restore()}return;}
+let im=ix.getImageData(0,0,w,h),d=im.data;
+if(effect!=='Normal'&&effect!=='Mirror Split'){
+const orig=(effect==='Edge Sketch')?new Uint8ClampedArray(d):null;
+for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,r=d[i],g=d[i+1],b=d[i+2],lum=.299*r+.587*g+.114*b;let R=r,G=g,B=b;
+switch(effect){case 'Grayscale':R=G=B=lum;break;case 'Sepia':R=.393*r+.769*g+.189*b;G=.349*r+.686*g+.168*b;B=.272*r+.534*g+.131*b;break;case 'Invert':R=255-r;G=255-g;B=255-b;break;case 'Vintage':R=r*1.09+20;G=g*.98+7;B=b*.76;break;case 'Noir':R=G=B=(lum-128)*1.8+110;break;case 'Neon':R=(r-g)*2+80;G=(g-b)*2+100;B=(b-r)*2+150;break;case 'Comic':R=Math.round(r/64)*64;G=Math.round(g/64)*64;B=Math.round(b/64)*64;break;case 'Rainbow':R=r*.6+Math.sin(x/85+t)*100+70;G=g*.6+Math.sin(x/85+t+2.1)*100+70;B=b*.6+Math.sin(x/85+t+4.2)*100+70;break;case 'Posterize':{let steps=2+Math.round((1-strength)*5);R=Math.round(r/255*steps)*255/steps;G=Math.round(g/255*steps)*255/steps;B=Math.round(b/255*steps)*255/steps;break}case 'Thermal':{const z=lum/255;R=255*clamp(1.5-Math.abs(4*z-3),0,1);G=255*clamp(1.5-Math.abs(4*z-2),0,1);B=255*clamp(1.5-Math.abs(4*z-1),0,1);break}case 'Edge Sketch':{const off=x<w-1?4:0;const down=y<h-1?w*4:0;const edge=Math.min(255,(Math.abs(r-orig[i+off])+Math.abs(g-orig[i+off+1])+Math.abs(b-orig[i+off+2])+Math.abs(r-orig[i+down])+Math.abs(g-orig[i+down+1])+Math.abs(b-orig[i+down+2]))*.8);R=G=B=255-edge;break}case 'Glitch':{const shift=Math.floor((Math.sin(y*.11+t*8)+Math.sin(y*.014-t*4))*strength*15),j=(y*w+((x+shift+w)%w))*4;R=d[j];G=g;B=d[(y*w+((x-shift+w)%w))*4+2];break}}
+d[i]=clamp(r+(R-r)*strength,0,255);d[i+1]=clamp(g+(G-g)*strength,0,255);d[i+2]=clamp(b+(B-b)*strength,0,255);
+}}
+cx.putImageData(im,0,0);if(effect==='Mirror Split'){cx.save();cx.translate(w,0);cx.scale(-1,1);cx.drawImage(internal,0,0,w/2,h,0,0,w/2,h);cx.restore()}}
+}
+function drawLoop(now=0){if(!stream)return;if(now-lastFrameTime>=33){render();lastFrameTime=now}raf=requestAnimationFrame(drawLoop)}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+const stamp=()=>new Date().toISOString().replace(/[:.]/g,'-');$('shot').onclick=()=>{if(!stream)return;canvas.toBlob(b=>b&&download(b,'camera-lab-'+stamp()+'.png'),'image/png')};
+function mimeType(){return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x))||''}
+$('record').onclick=async()=>{
+ if(!stream||!canRecord())return;
+ let combo=null;
+ try{
+  const withMic=$('micEnabled').checked;
+  if(withMic){
+   try{micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false})}
+   catch(e){setStatus('Microphone permission failed: '+(e.message||e.name)+'. Disable microphone to record silently.');return}
+  }
+  combo=canvas.captureStream(30);
+  if(micStream)for(const track of micStream.getAudioTracks())combo.addTrack(track);
+  chunks=[];
+  recorder=new MediaRecorder(combo,{mimeType:mimeType()||undefined,videoBitsPerSecond:3500000});
+  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+  recorder.onstop=()=>{
+   const b=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+   if(b.size)download(b,'camera-lab-recording-'+stamp()+'.webm');
+   combo.getTracks().forEach(t=>t.stop());
+   if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
+   recording=false;paused=false;
+   $('record').disabled=false;$('pause').disabled=true;$('stop').disabled=true;
+   $('pause').textContent='⏸ Pause';$('micEnabled').disabled=false;
+   setStatus('Video saved to Downloads.');
+  };
+  recorder.start(250);recording=true;
+  $('record').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('micEnabled').disabled=true;
+  setStatus(withMic?'🔴 Recording video + microphone audio…':'🔴 Recording silent video…');
+ }catch(e){
+  if(combo)combo.getTracks().forEach(t=>t.stop());
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
+  setStatus('Recording failed: '+e.message);
+ }
+};
+$('pause').onclick=()=>{if(!recorder)return;if(recorder.state==='recording'){recorder.pause();paused=true;$('pause').textContent='▶ Resume';setStatus('Recording paused — skipped time will be cut out.')}else if(recorder.state==='paused'){recorder.resume();paused=false;$('pause').textContent='⏸ Pause';setStatus('🔴 Recording…')}};$('stop').onclick=()=>{if(recorder&&recorder.state!=='inactive')recorder.stop()};
+const editor=$('editor'),source=$('trimVideo');function duration(){return Number.isFinite(editor.duration)?editor.duration:0}function sync(which){const dur=duration();if(!dur)return;let s=clamp(Number($('startTime').value)||0,0,dur),e=clamp(Number($('endTime').value)||0,0,dur);if(which==='start'&&s>=e)s=Math.max(0,e-.1);if(which==='end'&&e<=s)e=Math.min(dur,s+.1);$('startTime').value=s.toFixed(1);$('endTime').value=e.toFixed(1);$('trimStart').value=(s/dur*100).toFixed(2);$('trimEnd').value=(e/dur*100).toFixed(2)}
+$('videoFile').onchange=()=>{const f=$('videoFile').files?.[0];if(!f)return;if(videoUrl)URL.revokeObjectURL(videoUrl);videoUrl=URL.createObjectURL(f);editor.src=videoUrl;source.src=videoUrl;$('editorInfo').textContent=f.name;editor.load();source.load();$('previewCut').disabled=true;$('exportCut').disabled=true;};
+editor.onloadedmetadata=()=>{const d=duration();$('startTime').max=$('endTime').max=d;$('startTime').value='0';$('endTime').value=d.toFixed(1);$('trimStart').value='0';$('trimEnd').value='100';$('previewCut').disabled=!d;$('exportCut').disabled=!d;$('editorInfo').textContent=`Duration: ${d.toFixed(1)} seconds · ${editor.videoWidth} × ${editor.videoHeight}`};
+for(const id of ['startTime','endTime'])$(id).addEventListener('change',()=>sync(id==='startTime'?'start':'end'));for(const id of ['trimStart','trimEnd'])$(id).addEventListener('input',()=>{const s=duration()*Number($('trimStart').value)/100,e=duration()*Number($('trimEnd').value)/100;if(id==='trimStart')$('startTime').value=s.toFixed(1);else $('endTime').value=e.toFixed(1);sync(id==='trimStart'?'start':'end')});
+async function seek(v,t){if(Math.abs(v.currentTime-t)<.03)return;await new Promise((resolve,reject)=>{let timer=setTimeout(()=>{cleanup();reject(new Error('Video seek timed out'))},7000);function cleanup(){clearTimeout(timer);v.removeEventListener('seeked',ok);v.removeEventListener('error',bad)}function ok(){cleanup();resolve()}function bad(){cleanup();reject(new Error('Cannot seek video'))}v.addEventListener('seeked',ok,{once:true});v.addEventListener('error',bad,{once:true});v.currentTime=t})}
+$('previewCut').onclick=async()=>{const s=Number($('startTime').value),e=Number($('endTime').value);if(e<=s)return;editor.pause();try{await seek(editor,s);await editor.play();const check=()=>{if(editor.paused||editor.currentTime>=e){editor.pause();return}requestAnimationFrame(check)};check()}catch(ex){$('cutStatus').textContent='Preview error: '+ex.message}};
+$('cancelCut').onclick=()=>{trimAbort=true;source.pause();$('cutStatus').textContent='Cancelling export…'};
+$('exportCut').onclick=async()=>{if(exporting)return;const start=Number($('startTime').value),end=Number($('endTime').value);if(!(end>start&&end<=duration()+.11)){ $('cutStatus').textContent='Choose a valid start and end time.';return}if(!window.MediaRecorder||!$('trimCanvas').captureStream){$('cutStatus').textContent='Your browser does not support exporting trimmed video.';return}exporting=true;trimAbort=false;$('exportCut').disabled=true;$('cancelCut').disabled=false;const c=$('trimCanvas'),ctx=c.getContext('2d');let out=null,recorded=[],cap=null,drawId=0;try{source.pause();await seek(source,start);c.width=source.videoWidth||1280;c.height=source.videoHeight||720;ctx.drawImage(source,0,0,c.width,c.height);cap=c.captureStream(30);const opts={mimeType:mimeType()||undefined,videoBitsPerSecond:3500000};out=new MediaRecorder(cap,opts);out.ondataavailable=e=>{if(e.data.size)recorded.push(e.data)};const done=new Promise((resolve,reject)=>{out.onstop=resolve;out.onerror=e=>reject(e.error||new Error('Recording error'))});out.start(200);const draw=()=>{if(trimAbort||source.paused||source.ended)return;ctx.drawImage(source,0,0,c.width,c.height);drawId=requestAnimationFrame(draw)};await source.play();draw();$('cutStatus').textContent='Exporting… the video must play in real time.';while(!trimAbort&&!source.ended&&source.currentTime<end){await new Promise(r=>setTimeout(r,45));$('cutStatus').textContent=`Exporting… ${(source.currentTime-start).toFixed(1)} / ${(end-start).toFixed(1)} seconds`}source.pause();cancelAnimationFrame(drawId);ctx.drawImage(source,0,0,c.width,c.height);out.stop();await done;if(!trimAbort){const blob=new Blob(recorded,{type:out.mimeType||'video/webm'});if(blob.size){download(blob,'camera-lab-cut-'+stamp()+'.webm');$('cutStatus').textContent='Cut video exported as WebM (video only).'}else $('cutStatus').textContent='No output generated.'}else $('cutStatus').textContent='Export cancelled.'}catch(e){$('cutStatus').textContent='Export error: '+e.message;try{if(out&&out.state!=='inactive')out.stop()}catch(_){}}finally{source.pause();cancelAnimationFrame(drawId);if(cap)cap.getTracks().forEach(t=>t.stop());exporting=false;$('exportCut').disabled=false;$('cancelCut').disabled=true}};
+window.addEventListener('beforeunload',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(micStream)micStream.getTracks().forEach(t=>t.stop());if(videoUrl)URL.revokeObjectURL(videoUrl);});
+})();
+</script>
+</body></html>
